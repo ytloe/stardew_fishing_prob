@@ -1,0 +1,23 @@
+{
+  "Seasons": {
+    "春天": "spring",
+    "夏天": "summer",
+    "秋天": "fall",
+    "冬天": "winter"
+  },
+  "Weather": {
+    "晴天": "sunny",
+    "雨天": "rainy"
+  },
+  "RodInternalIds": {
+    "训练钓竿": "(T)TrainingRod"
+  },
+  "BaitInternalIds": {
+    "魔法鱼饵": "(O)908",
+    "Bait": "(O)685",
+    "鱼饵": "(O)685"
+  },
+  "TackleInternalIds": {
+    "珍稀诱钩": "(O)856"
+  }
+}

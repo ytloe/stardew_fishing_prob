@@ -1,0 +1,18 @@
+{
+  "location_name": "Backwoods",
+  "rod_type": "铱金钓竿",
+  "bait_type": "Largemouth Bass Bait",
+  "tackles": [""],
+  "weather": "晴天",
+  "season": "春天",
+  "fishing_level": 10,
+  "luck_level": 0,
+  "daily_luck": 0.0,
+  "water_depth": 5,
+  "conditions": {
+    "PLAYER_HAS_ALL_SECRET_NOTES": "true",
+    "PLAYER_HAS_MAGNIFYING_GLASS": "true",
+    "IS_FESTIVAL_DAY": "false",
+    "PLAYER_SPECIAL_ORDER_RULE_ACTIVE Current": ""
+  }
+}
