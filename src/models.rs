@@ -31,6 +31,7 @@ pub struct FishAreaData {
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct SpawnFishData {
+    pub id: Option<String>, 
     pub item_id: Option<String>,
     #[serde(default)]
     pub random_item_id: Option<Vec<String>>,
@@ -197,4 +198,5 @@ pub struct ProbabilityDetails {
     pub get_chance_prob: f64,
     pub bite_chance_prob: f64,
     pub final_prob: f64,
+    pub source_group_id: String,
 }

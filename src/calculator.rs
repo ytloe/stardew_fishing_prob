@@ -96,31 +96,31 @@ fn resolve_spawn_entry<'a>(
     call_stack: &mut HashSet<String>,
     fish_area_id: &Option<String>,
 ) -> Vec<ResolvedItem<'a>> {
-    let item_id_source = if let Some(item_id) = &spawn_data.item_id {
-        item_id
-    } else if let Some(random_ids) = &spawn_data.random_item_id {
-        return vec![ResolvedItem {
-            display_id: random_ids.join("|"),
-            source_data: spawn_data,
-        }];
+    // --- 核心修正：处理 RandomItemId ---
+    if let Some(random_ids) = &spawn_data.random_item_id {
+        // 不再合并ID，而是为每个ID创建一个独立的 ResolvedItem
+        return random_ids.iter().map(|id| ResolvedItem {
+            display_id: id.clone(),
+            source_data: spawn_data, // 它们共享相同的源数据（概率、优先级等）
+        }).collect();
+    }
+
+    if let Some(item_id) = &spawn_data.item_id {
+        match item_id.as_str() {
+            "SECRET_NOTE_OR_ITEM" => {
+                let has_all_notes = config.conditions.get("PLAYER_HAS_ALL_SECRET_NOTES") == Some(&"true".to_string());
+                if has_all_notes { vec![] } 
+                else { vec![ResolvedItem { display_id: item_id.to_string(), source_data: spawn_data }] }
+            }
+            id if id.starts_with("LOCATION_FISH") => {
+                if let Some(target_location) = utils::parse_location_query(id) {
+                    resolve_location_fish(target_location, config, game_data, call_stack, fish_area_id, true)
+                } else { vec![] }
+            }
+            _ => vec![ResolvedItem { display_id: item_id.to_string(), source_data: spawn_data }],
+        }
     } else {
-        return vec![];
-    };
-
-    let item_id = item_id_source.as_str();
-
-    match item_id {
-        "SECRET_NOTE_OR_ITEM" => {
-            let has_all_notes = config.conditions.get("PLAYER_HAS_ALL_SECRET_NOTES") == Some(&"true".to_string());
-            if has_all_notes { vec![] } 
-            else { vec![ResolvedItem { display_id: item_id.to_string(), source_data: spawn_data }] }
-        }
-        id if id.starts_with("LOCATION_FISH") => {
-            if let Some(target_location) = utils::parse_location_query(id) {
-                resolve_location_fish(target_location, config, game_data, call_stack, fish_area_id, true)
-            } else { vec![] }
-        }
-        _ => vec![ResolvedItem { display_id: item_id.to_string(), source_data: spawn_data }],
+        vec![]
     }
 }
 
@@ -197,7 +197,7 @@ pub fn calculate_final_probabilities<'a>(
         
         let mut final_probs_map = HashMap::new();
         if let Some(ptr) = target_ptr_opt {
-             final_probs_map.insert(ptr, p_final_target);
+            final_probs_map.insert(ptr, p_final_target);
         }
         
         let sum_prob_nontarget_once: f64 = single_pass_probs.iter()
@@ -238,6 +238,9 @@ pub fn calculate_final_probabilities<'a>(
         let (get_chance, bite_chance) = get_individual_success_rates(item, config, game_data);
         let final_prob = final_probabilities.get(&item_ptr).cloned().unwrap_or(0.0);
         
+        // --- 修正：现在可以安全地访问 source_data.id ---
+        let source_group_id = item.source_data.id.clone().unwrap_or_else(|| item.display_id.clone());
+
         ProbabilityDetails {
             display_id: item.display_id.clone(),
             name: get_resolved_item_name(item, game_data),
@@ -245,6 +248,7 @@ pub fn calculate_final_probabilities<'a>(
             get_chance_prob: get_chance,
             bite_chance_prob: bite_chance,
             final_prob,
+            source_group_id,
         }
     }).collect();
 
@@ -361,8 +365,8 @@ fn get_individual_success_rates(item: &ResolvedItem, config: &AppConfig, game_da
 
 /// 获取物品的最终显示/聚合名称
 fn get_resolved_item_name(item: &ResolvedItem, game_data: &GameData) -> String {
-    if item.display_id.contains('|') { return "Trash".to_string(); }
+    // --- 核心修正：移除对'|'的特殊处理 ---
     game_data.fish.get(&item.display_id)
         .map(|data| data.name.clone())
-        .unwrap_or_else(|| item.display_id.clone())
+        .unwrap_or_else(|| item.display_id.clone()) // 如果在Fish.json找不到，就直接显示ID
 }
