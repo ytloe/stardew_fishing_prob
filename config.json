@@ -1,8 +1,8 @@
 {
   "location_name": "Submarine",
   "rod_type": "铱金钓竿",
-  "bait_type": "魔法鱼饵",
-  "tackles": ["诱钩"],
+  "bait_type": "鱼饵",
+  "tackles": ["珍稀诱钩"],
   "weather": "晴天",
   "season": "冬天",
   "fishing_level": 10,
