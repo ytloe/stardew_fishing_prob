@@ -96,17 +96,11 @@ fn resolve_spawn_entry<'a>(
     call_stack: &mut HashSet<String>,
     fish_area_id: &Option<String>,
 ) -> Vec<ResolvedItem<'a>> {
-    // --- 核心修正：处理 RandomItemId ---
-    if let Some(random_ids) = &spawn_data.random_item_id {
-        // 不再合并ID，而是为每个ID创建一个独立的 ResolvedItem
-        return random_ids.iter().map(|id| ResolvedItem {
-            display_id: id.clone(),
-            source_data: spawn_data, // 它们共享相同的源数据（概率、优先级等）
-        }).collect();
-    }
-
+    // --- 核心修正：正确处理 ItemId 和 RandomItemId ---
+    
+    // 如果有 ItemId，直接使用
     if let Some(item_id) = &spawn_data.item_id {
-        match item_id.as_str() {
+        return match item_id.as_str() {
             "SECRET_NOTE_OR_ITEM" => {
                 let has_all_notes = config.conditions.get("PLAYER_HAS_ALL_SECRET_NOTES") == Some(&"true".to_string());
                 if has_all_notes { vec![] } 
@@ -118,10 +112,19 @@ fn resolve_spawn_entry<'a>(
                 } else { vec![] }
             }
             _ => vec![ResolvedItem { display_id: item_id.to_string(), source_data: spawn_data }],
-        }
-    } else {
-        vec![]
+        };
     }
+    
+    // 如果没有 ItemId，但有 RandomItemId，则展开它
+    if let Some(random_ids) = &spawn_data.random_item_id {
+        return random_ids.iter().map(|id| ResolvedItem {
+            display_id: id.clone(),
+            source_data: spawn_data,
+        }).collect();
+    }
+    
+    // 如果两者都没有，返回空
+    vec![]
 }
 
 
@@ -378,7 +381,7 @@ fn get_individual_success_rates(item: &ResolvedItem, config: &AppConfig, game_da
 }
 
 /// 获取物品的最终显示/聚合名称
-fn get_resolved_item_name(item: &ResolvedItem, game_data: &GameData) -> String {
+pub fn get_resolved_item_name(item: &ResolvedItem, game_data: &GameData) -> String {
     // --- 核心修正：移除对'|'的特殊处理 ---
     game_data.fish.get(&item.display_id)
         .map(|data| data.name.clone())

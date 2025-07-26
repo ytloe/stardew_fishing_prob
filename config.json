@@ -1,7 +1,7 @@
 {
   "location_name": "Submarine",
   "rod_type": "铱金钓竿",
-  "bait_type": "Blobfish Bait",
+  "bait_type": "魔法鱼饵",
   "tackles": ["诱钩"],
   "weather": "晴天",
   "season": "冬天",

@@ -190,6 +190,7 @@ pub struct AppConfig {
 }
 
 /// 用于在main函数中传递和打印最终详细概率信息的结构体。
+#[allow(dead_code)] 
 #[derive(Debug, Clone)]
 pub struct ProbabilityDetails {
     pub display_id: String,
