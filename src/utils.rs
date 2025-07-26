@@ -20,11 +20,19 @@ pub fn calculate_time_segments(
     resolved_items: &[ResolvedItem],
     game_data: &GameData,
 ) -> Vec<(u32, u32)> {
+    // BTreeSet 会自动去重并排序
     let mut time_points = BTreeSet::new();
+    // 确保一天的开始和结束都被包含
     time_points.insert(600);
     time_points.insert(2600);
 
     for item in resolved_items {
+        // --- 核心修正：在这里检查 IgnoreFishDataRequirements 标志 ---
+        // 如果此条目忽略 Fish.json 的要求，则它的时间窗口对我们没有意义，直接跳过。
+        if item.source_data.ignore_fish_data_requirements {
+            continue;
+        }
+
         if let Some(fish_data) = game_data.fish.get(&item.display_id) {
             for &(start, end) in &fish_data.time_windows {
                 time_points.insert(start);
@@ -34,6 +42,7 @@ pub fn calculate_time_segments(
     }
 
     let sorted_points: Vec<u32> = time_points.into_iter().collect();
+    // 使用 .windows(2) 创建连续、不重叠的时间段
     sorted_points
         .windows(2)
         .map(|window| (window[0], window[1]))

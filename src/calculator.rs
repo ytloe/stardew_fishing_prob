@@ -309,6 +309,7 @@ fn calculate_group_probabilities<'a>(
 fn get_individual_success_rates(item: &ResolvedItem, config: &AppConfig, game_data: &GameData) -> (f64, f64) {
     let is_targeted = config.bait_target_fish_id.as_deref() == Some(&item.display_id);
     
+    // --- 存活概率 (GetChance) 计算 ---
     let mut get_chance_prob = item.source_data.chance;
     if config.has_curiosity_lure && item.source_data.curiosity_lure_buff > 0.0 {
         get_chance_prob += item.source_data.curiosity_lure_buff;
@@ -321,16 +322,29 @@ fn get_individual_success_rates(item: &ResolvedItem, config: &AppConfig, game_da
     }
     get_chance_prob += item.source_data.chance_boost_per_luck_level * config.luck_level as f64;
     
+    // --- 咬钩概率 (BiteChance) 计算 ---
     let mut bite_chance_prob = 1.0;
-    if !item.source_data.ignore_fish_data_requirements {
-        if let Some(fish_data) = game_data.fish.get(&item.display_id) {
-            let mut passes = true;
-            if config.is_training_rod {
-                if let Some(false) = item.source_data.can_use_training_rod { passes = false; }
-                else if item.source_data.can_use_training_rod.is_none() && fish_data.difficulty >= 50 { passes = false; }
+
+    if let Some(fish_data) = game_data.fish.get(&item.display_id) {
+        // 首先，无条件执行训练钓竿的检查
+        if config.is_training_rod {
+            if let Some(false) = item.source_data.can_use_training_rod {
+                bite_chance_prob = 0.0;
             }
-            if config.is_tutorial_catch && !fish_data.is_tutorial_fish { passes = false; }
-            if fish_data.min_fishing_level > config.fishing_level { passes = false; }
+            else if item.source_data.can_use_training_rod.is_none() && fish_data.difficulty >= 50 {
+                bite_chance_prob = 0.0;
+            }
+        }
+
+        // 只有在训练钓竿检查通过后，才进行后续计算
+        if bite_chance_prob > 0.0 && !item.source_data.ignore_fish_data_requirements {
+            let mut passes = true;
+            if config.is_tutorial_catch && !fish_data.is_tutorial_fish {
+                passes = false;
+            }
+            if fish_data.min_fishing_level > config.fishing_level {
+                passes = false;
+            }
 
             if !passes {
                 bite_chance_prob = 0.0;
