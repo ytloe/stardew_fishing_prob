@@ -1,10 +1,10 @@
 {
-  "location_name": "Submarine",
+  "location_name": "Beach",
   "rod_type": "铱金钓竿",
   "bait_type": "鱼饵",
-  "tackles": ["珍稀诱钩"],
+  "tackles": [""],
   "weather": "晴天",
-  "season": "冬天",
+  "season": "夏天",
   "fishing_level": 10,
   "luck_level": 0,
   "daily_luck": 0.0,

@@ -40,10 +40,12 @@ fn main() {
             // 根据是否为魔法鱼饵选择不同的输出模式
             if app_config.bait_item_id.as_deref() == Some("(O)908") {
                 // --- 魔法鱼饵的简单列表输出 ---
-                run_magic_bait_scenario(&segment_items, &app_config, &game_data, &area_id);
+                // <<< MODIFIED: Pass the 'segment' tuple to the function
+                run_magic_bait_scenario(segment, &segment_items, &app_config, &game_data, &area_id);
             } else {
                 // --- 其他鱼饵的多列对比表格输出 ---
-                run_comparison_scenario(&segment_items, &app_config, &game_data, &area_id);
+                // <<< MODIFIED: Pass the 'segment' tuple to the function
+                run_comparison_scenario(segment, &segment_items, &app_config, &game_data, &area_id);
             }
         }
     }
@@ -51,13 +53,19 @@ fn main() {
 
 /// 运行并打印魔法鱼饵的单列输出
 fn run_magic_bait_scenario<'a>(
+    // <<< MODIFIED: Add 'time_segment' as an argument
+    time_segment: (u32, u32),
     segment_items: &[&'a models::ResolvedItem<'a>],
     app_config: &models::AppConfig,
     game_data: &models::GameData,
     area_id: &Option<String>
 ) {
     let area_name = if let Some(id) = area_id { id.as_str() } else { "Default" };
-    println!("\nLocation: {} ({}) - Magic Bait Mode", app_config.location_name, area_name);
+    // <<< MODIFIED: Update the title to include the time segment
+    println!(
+        "\nLocation: {} ({}) | Time: {} - {} | Magic Bait Mode",
+        app_config.location_name, area_name, time_segment.0, time_segment.1
+    );
 
     let detailed_probabilities = calculator::calculate_final_probabilities(segment_items, app_config, game_data);
     let prob_map: HashMap<String, f64> = detailed_probabilities.into_iter()
@@ -113,13 +121,17 @@ fn run_magic_bait_scenario<'a>(
 
 /// 运行并打印多列对比表格
 fn run_comparison_scenario<'a>(
+    time_segment: (u32, u32),
     segment_items: &[&'a models::ResolvedItem<'a>],
     app_config: &models::AppConfig,
     game_data: &models::GameData,
     area_id: &Option<String>
 ) {
     let area_name = if let Some(id) = area_id { id.as_str() } else { "Default" };
-    println!("\nLocation: {} ({}) - Comparison Mode", app_config.location_name, area_name);
+    println!(
+        "\nLocation: {} ({}) | Time: {} - {} | Comparison Mode",
+        app_config.location_name, area_name, time_segment.0, time_segment.1
+    );
     
     let mut row_items = segment_items.to_vec();
     row_items.sort_by_key(|item| item.source_data.precedence);
@@ -137,21 +149,34 @@ fn run_comparison_scenario<'a>(
     training_rod_config.bait_target_fish_id = None;
     scenarios.push(("TrainingRod".to_string(), training_rod_config));
 
+    // --- 在这里添加过滤逻辑 ---
     let mut bait_fish_scenarios = Vec::new();
     let mut handled_baits = HashSet::new();
     for &item in segment_items {
+        // 步骤1：检查这是否是一个在 Fish.json 中定义的物品，并且我们还没有为它创建过鱼饵场景
         if game_data.fish.contains_key(&item.display_id) && handled_baits.insert(item.display_id.clone()) {
-             let mut bait_config = app_config.clone();
-             bait_config.bait_item_id = Some("(O)SpecificBait".to_string());
-             bait_config.bait_target_fish_id = Some(item.display_id.clone());
-             bait_config.using_good_bait = true;
-             let fish_name_en = &game_data.fish[&item.display_id].name;
-             bait_fish_scenarios.push((fish_name_en.clone(), bait_config));
+            
+            // 获取物品的英文名
+            let fish_name_en = &game_data.fish[&item.display_id].name;
+
+            // <<< MODIFIED: 步骤2：增加一个判断，如果物品是绿藻或白藻，则跳过，不为它创建特制鱼饵场景
+            if fish_name_en == "Green Algae" || fish_name_en == "White Algae" || fish_name_en == "Seaweed"{
+                continue; // 跳过藻类
+            }
+
+            // 步骤3：如果不是藻类，则正常创建特制鱼饵场景
+            let mut bait_config = app_config.clone();
+            bait_config.bait_item_id = Some("(O)SpecificBait".to_string());
+            bait_config.bait_target_fish_id = Some(item.display_id.clone());
+            bait_config.using_good_bait = true;
+            bait_fish_scenarios.push((fish_name_en.clone(), bait_config));
         }
     }
+    // --- 过滤逻辑结束 ---
+
     bait_fish_scenarios.sort_by_key(|(_name, cfg)| {
-         segment_items.iter().find(|item| &item.display_id == cfg.bait_target_fish_id.as_ref().unwrap())
-         .map_or(i32::MAX, |item| item.source_data.precedence)
+        segment_items.iter().find(|item| &item.display_id == cfg.bait_target_fish_id.as_ref().unwrap())
+        .map_or(i32::MAX, |item| item.source_data.precedence)
     });
     scenarios.extend(bait_fish_scenarios);
 
